@@ -1,5 +1,51 @@
+<!DOCTYPE html>
 <html>
-  <body>
-    <h1>Hello Extensions</h1>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <title>Red Flag Radar</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 300px;
+      padding: 15px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .summary {
+      margin-top: 10px;
+    }
+    .count {
+      font-size: 16px;
+      margin: 5px 0;
+    }
+    .red { color: red; }
+    .yellow { color: orange; }
+    .green { color: green; }
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #777;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Red Flag Radar</h1>
+  <div class="summary">
+    <p class="count"><strong>Total Red Flags:</strong> <span id="totalCount">0</span></p>
+    <p class="count red"><strong>Red (High):</strong> <span id="redCount">0</span></p>
+    <p class="count yellow"><strong>Yellow (Medium):</strong> <span id="yellowCount">0</span></p>
+    <p class="count green"><strong>Green (Low/None):</strong> <span id="greenCount">0</span></p>
+    <p class="count"><strong>Words on page:</strong> <span id="wordCount">0</span></p>
+</div>
+  <div class="footer">
+    Highlighting emotional red flags using ML ✨
+  </div>
+
+  <script src="popups/popup.js"></script>
+</body>
 </html>
