@@ -11,9 +11,15 @@
     "background": {
         "service_worker": "scripts/background.js"
     },
+    "web_accessible_resources": [
+      {
+        "resources": ["bower_components/kuromoji/dict/*"],
+        "matches": ["<all_urls>"]
+      }
+    ],
     "content_scripts": [
         {
-          "js": ["scripts/content.js"],
+          "js": ["bower_components/kuromoji/build/kuromoji.js", "scripts/content.js"],
           "matches": [
             "<all_urls>"
           ]
