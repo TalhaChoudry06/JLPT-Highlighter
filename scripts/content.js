@@ -36,7 +36,7 @@
         replaced = replaced.replace(regex, (match) => {
           matched = true;
           count++;
-          return `<span class="__highlightedWord" style="background:lime; padding:0 2px; border-radius:2px;">${match}</span>`;
+          return `<span class="__highlightedWord" style="background:lime; padding:0 2px; border-radius:2px; cursor:pointer;" data-word="${match}">${match}</span>`;
         });
       }
     }
@@ -77,7 +77,50 @@
         return;
       }
       console.log("✅ Tokenizer built."); // Add this
-
+      
+      function extractMergedWords(tokens) {
+        const words = [];
+        let i = 0;
+    
+        while (i < tokens.length) {
+          const current = tokens[i];
+          const next = tokens[i + 1];
+          const next2 = tokens[i + 2];
+    
+          // Case 1: Verb + auxiliary (e.g., 食べ + たい → 食べたい)
+          if (
+            current.pos === "動詞" &&
+            next && next.pos === "助動詞"
+          ) {
+            words.push(current.surface_form + next.surface_form);
+            i += 2;
+            continue;
+          }
+    
+          // Case 2: Verb + suffix + auxiliary (e.g., 行か + なかっ + た → 行かなかった)
+          if (
+            current.pos === "動詞" &&
+            next && next.pos === "助動詞" &&
+            next2 && next2.pos === "助動詞"
+          ) {
+            words.push(current.surface_form + next.surface_form + next2.surface_form);
+            i += 3;
+            continue;
+          }
+    
+          // Add base form if valid
+          if (current.basic_form && current.basic_form !== "*") {
+            words.push(current.basic_form);
+          }
+    
+          // Also add surface form
+          words.push(current.surface_form);
+          i++;
+        }
+    
+        return [...new Set(words)];
+      }
+    
       // Grab the full page's visible text
       const text = document.body.innerText || "";
 
@@ -89,13 +132,27 @@
         t.basic_form === "*" ? t.surface_form : t.basic_form
       );
 
-      // Remove duplicates
-      const uniqueWords = [...new Set(words)];
+      // 🔽 EXTRACT SMART WORD LIST WITH CONJUGATIONS
+      const uniqueWords = extractMergedWords(tokens);
+
 
       // Walk through all visible text nodes and highlight matches
       walkTextNodes(document.body, (textNode) => {
         highlightMatchesInNode(textNode, uniqueWords);
       });
+
+      document.addEventListener("click", function (e) {
+        if (e.target.classList.contains("__highlightedWord")) {
+          const word = e.target.dataset.word;
+          // You can do anything here:
+          // - Open a popup
+          // - Search the word
+          // - Look it up in your database
+          // - Show a translation
+          // - Send to background.js
+          alert(`You clicked on: ${word}`);
+        }
+      });    
 
       // Save the state and number of highlights
       chrome.storage.local.set({ highlightedActive: true, wordCount: count });
