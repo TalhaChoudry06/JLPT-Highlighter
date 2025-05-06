@@ -35,13 +35,18 @@
 </head>
 <body>
   <h1>Red Flag Radar</h1>
+  <label>
+    <input type="checkbox" id="highlightToggle" />
+    Highlight words
+  </label>
+
   <div class="summary">
     <p class="count"><strong>Total Red Flags:</strong> <span id="totalCount">0</span></p>
     <p class="count red"><strong>Red (High):</strong> <span id="redCount">0</span></p>
     <p class="count yellow"><strong>Yellow (Medium):</strong> <span id="yellowCount">0</span></p>
     <p class="count green"><strong>Green (Low/None):</strong> <span id="greenCount">0</span></p>
-    <p class="count"><strong>Words on page:</strong> <span id="wordCount">0</span></p>
-</div>
+    <p><strong>Words on page:</strong> <span id="wordCount">0</span></p>
+  </div>
   <div class="footer">
     Highlighting emotional red flags using ML ✨
   </div>
