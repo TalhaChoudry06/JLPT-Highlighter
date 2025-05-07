@@ -20,9 +20,8 @@
     "content_scripts": [
         {
           "js": ["bower_components/kuromoji/build/kuromoji.js", "scripts/content.js"],
-          "matches": [
-            "<all_urls>"
-          ]
+          "matches": ["<all_urls>"],
+          "run_at": "document_idle"
         }
       ] 
   }

@@ -1,3 +1,8 @@
+if (typeof window.clickListenerAttached === "undefined") {
+  window.clickListenerAttached = false;
+}
+
+// This script runs in the context of the web page
 (async function () {
   // Retrieve the highlight state from Chrome's local storage
   const { highlightedActive } = await chrome.storage.local.get("highlightedActive");
@@ -36,7 +41,7 @@
         replaced = replaced.replace(regex, (match) => {
           matched = true;
           count++;
-          return `<span class="__highlightedWord" style="background:lime; padding:0 2px; border-radius:2px; cursor:pointer;" data-word="${match}">${match}</span>`;
+          return `<span class="__highlightedWord" style="background:yellow; padding:0 0px; border-radius:0px; cursor:pointer;" data-word="${match}">${match}</span>`;
         });
       }
     }
@@ -140,19 +145,22 @@
       walkTextNodes(document.body, (textNode) => {
         highlightMatchesInNode(textNode, uniqueWords);
       });
-
-      document.addEventListener("click", function (e) {
-        if (e.target.classList.contains("__highlightedWord")) {
-          const word = e.target.dataset.word;
-          // You can do anything here:
-          // - Open a popup
-          // - Search the word
-          // - Look it up in your database
-          // - Show a translation
-          // - Send to background.js
-          alert(`You clicked on: ${word}`);
-        }
-      });    
+      if (!window.clicklistenerAttached) {
+        document.addEventListener("click", function (e) {
+          if (e.target.classList.contains("__highlightedWord")) {
+            const word = e.target.dataset.word;
+            // You can do anything here:
+            // - Open a popup
+            // - Search the word
+            window.open(`https://jisho.org/search/${word}`, "_blank");
+            // - Look it up in your database
+            // - Show a translation
+            // - Send to background.js
+            alert(`You clicked on: ${word}`);
+          }
+        });   
+      } 
+      window.clicklistenerAttached = true; // Set the flag to true after attaching the listener
 
       // Save the state and number of highlights
       chrome.storage.local.set({ highlightedActive: true, wordCount: count });
