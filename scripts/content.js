@@ -26,33 +26,45 @@ if (typeof window.clickListenerAttached === "undefined") {
 
   // Highlights any matching Japanese words in the given text node
   function highlightMatchesInNode(textNode, matchWords) {
-    const text = textNode.textContent; // Original text
-    let replaced = text;               // Text to modify
-    let matched = false;              // Flag to track if any word matched
-
-    for (const word of matchWords) {
-      // Basic check to avoid matching 1-character particles
-      if (word && word.length > 1 && replaced.includes(word)) {
-        // Escape special characters for safe regex
-        const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(safeWord, 'g'); // Global match
-
-        // Replace the matched word with a highlighted <span>
-        replaced = replaced.replace(regex, (match) => {
-          matched = true;
-          count++;
-          return `<span class="__highlightedWord" style="background:yellow; padding:0 0px; border-radius:0px; cursor:pointer;" data-word="${match}">${match}</span>`;
-        });
+    const text = textNode.textContent;
+    const parent = textNode.parentNode;
+    let didMatch = false;
+  
+    // Build one big regex to match all words
+    const escapedWords = matchWords
+      .filter(word => word && word.length > 1)
+      .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  
+    if (escapedWords.length === 0) return;
+  
+    const regex = new RegExp(`(${escapedWords.join('|')})`, 'g');
+    const parts = text.split(regex);
+  
+    const fragment = document.createDocumentFragment();
+  
+    for (const part of parts) {
+      if (regex.test(part)) {
+        const span = document.createElement("span");
+        span.className = "__highlightedWord";
+        span.dataset.word = part;
+        span.textContent = part;
+        span.style.background = "yellow";
+        span.style.padding = "0 0px";
+        span.style.borderRadius = "0px";
+        span.style.cursor = "pointer";
+        fragment.appendChild(span);
+        count++;
+        didMatch = true;
+      } else {
+        fragment.appendChild(document.createTextNode(part));
       }
     }
-
-    if (matched) {
-      // If any match was found, replace the text node with a <span>
-      const span = document.createElement("span");
-      span.innerHTML = replaced;
-      textNode.parentNode.replaceChild(span, textNode);
+  
+    if (didMatch) {
+      parent.replaceChild(fragment, textNode);
     }
   }
+  
 
   if (highlightedActive) {
     // 🔁 If highlighting is already active, remove all highlights
