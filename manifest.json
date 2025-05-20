@@ -13,7 +13,7 @@
     },
     "web_accessible_resources": [
       {
-        "resources": ["bower_components/kuromoji/dict/*"],
+        "resources": ["bower_components/kuromoji/dict/*", "vocabToJlptLevel/*.json"],
         "matches": ["<all_urls>"]
       }
     ],

@@ -1,3 +1,7 @@
+if (typeof window.termBank1 === "undefined") {
+  window.termBank1 = chrome.runtime.getURL('../vocabToJlptLevel/term_meta_bank_1.json');
+}
+
 if (typeof window.clickListenerAttached === "undefined") {
   window.clickListenerAttached = false;
 }
@@ -48,7 +52,27 @@ if (typeof window.clickListenerAttached === "undefined") {
         span.className = "__highlightedWord";
         span.dataset.word = part;
         span.textContent = part;
-        span.style.background = "yellow";
+
+        // find words jlpt level and highlights them regarding them
+        function findJlptLevel(word) {
+          fetch(window.termBank1)
+          .then(res => res.json())
+          .then(data => {
+            const match = data.find(entry => entry[0] === word);
+            if (match) {
+              console.log("Found:", match);
+              span.style.background = "lime";
+            } else {
+              span.style.background = "yellow";
+            }
+          })
+          .catch(err => {
+            console.error("Error fetching JLPT data:", err);
+            span.style.background = "yellow";
+          });
+        } 
+
+        findJlptLevel(part);
         span.style.padding = "0 0px";
         span.style.borderRadius = "0px";
         span.style.cursor = "pointer";
