@@ -1,6 +1,6 @@
 {
-    "name": "Hello Extensions",
-    "description": "Base Level Extension",
+    "name": "Japanese OCR",
+    "description": "JLPT highlighter extension",
     "version": "1.0",
     "manifest_version": 3,
     "permissions": ["storage", "tabs", "scripting", "activeTab"],
