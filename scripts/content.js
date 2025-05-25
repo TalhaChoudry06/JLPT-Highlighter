@@ -1,51 +1,89 @@
+// === Initialize resources ===
 if (typeof window.termBank1 === "undefined") {
   window.termBank1 = chrome.runtime.getURL('../vocabToJlptLevel/term_meta_bank_1.json');
+}
+if (typeof window.termBank2 === "undefined") {
+  window.termBank2 = chrome.runtime.getURL('../vocabToJlptLevel/term_meta_bank_2.json');
+}
+if (!window.indexedDB) {
+  alert("Sorry! This browser does not support IndexedDB.");
+}
+
+if (typeof window.openRequest === 'undefined') {
+  window.openRequest = indexedDB.open("Bookmark", 4);
 }
 
 if (typeof window.clickListenerAttached === "undefined") {
   window.clickListenerAttached = false;
 }
 
-// This script runs in the context of the web page
-(async function () {
-  // Retrieve the highlight state from Chrome's local storage
-  const { highlightedActive } = await chrome.storage.local.get("highlightedActive");
+if (typeof window.db === 'undefined') {
+  window.db = null;
+}
 
-  // Counter for how many words are highlighted
+openRequest.onupgradeneeded = function(event) {
+  const db = event.target.result;
+  if (!db.objectStoreNames.contains("myObjectStore")) {
+    const objectStore = db.createObjectStore("myObjectStore", { keyPath: "id" });
+    objectStore.createIndex("nameIndex", "name", { unique: false });
+  }
+  if (!db.objectStoreNames.contains("words")) {
+    db.createObjectStore("words", { autoIncrement: true });
+  }
+};
+
+openRequest.onsuccess = function(event) {
+  window.db = event.target.result;
+};
+
+openRequest.onerror = function(event) {
+  console.error("DB error:", openRequest.error);
+};
+
+function addBookmark(word, id) {
+  if (!window.db) {
+    console.error("Database not initialized yet");
+    return;
+  }
+  const transaction = window.db.transaction(["words"], "readwrite");
+  const store = transaction.objectStore("words");
+  const wordEntry = { id, word };
+  const request = store.add(wordEntry);
+  request.onsuccess = () => console.log("Word added:", wordEntry);
+  request.onerror = () => console.error("Error adding word:", request.error);
+}
+
+// === Main Highlighter Logic ===
+(async function () {
+  const { highlightedActive } = await chrome.storage.local.get("highlightedActive");
   let count = 0;
 
-  // Recursively walks through the DOM to find text nodes
   function walkTextNodes(node, callback) {
     if (node.nodeType === Node.TEXT_NODE) {
-      // If it's a text node, apply the callback
       callback(node);
     } else if (
       node.nodeType === Node.ELEMENT_NODE &&
       !['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(node.tagName)
     ) {
-      // If it's a safe element (not <script>, <style>, etc.), go deeper
       Array.from(node.childNodes).forEach(child => walkTextNodes(child, callback));
     }
   }
 
-  // Highlights any matching Japanese words in the given text node
   function highlightMatchesInNode(textNode, matchWords) {
     const text = textNode.textContent;
     const parent = textNode.parentNode;
     let didMatch = false;
-  
-    // Build one big regex to match all words
+
     const escapedWords = matchWords
       .filter(word => word && word.length > 1)
       .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  
+
     if (escapedWords.length === 0) return;
-  
+
     const regex = new RegExp(`(${escapedWords.join('|')})`, 'g');
     const parts = text.split(regex);
-  
     const fragment = document.createDocumentFragment();
-  
+
     for (const part of parts) {
       if (regex.test(part)) {
         const span = document.createElement("span");
@@ -53,28 +91,17 @@ if (typeof window.clickListenerAttached === "undefined") {
         span.dataset.word = part;
         span.textContent = part;
 
-        // find words jlpt level and highlights them regarding them
-        function findJlptLevel(word) {
-          fetch(window.termBank1)
+        // Apply JLPT highlight coloring
+        fetch(window.termBank1)
           .then(res => res.json())
           .then(data => {
-            const match = data.find(entry => entry[0] === word);
-            if (match) {
-              console.log("Found:", match);
-              span.style.background = "lime";
-            } else {
-              span.style.background = "yellow";
-            }
+            const match = data.find(entry => entry[0] === part);
+            span.style.background = match ? "lime" : "yellow";
           })
-          .catch(err => {
-            console.error("Error fetching JLPT data:", err);
+          .catch(() => {
             span.style.background = "yellow";
           });
-        } 
 
-        findJlptLevel(part);
-        span.style.padding = "0 0px";
-        span.style.borderRadius = "0px";
         span.style.cursor = "pointer";
         fragment.appendChild(span);
         count++;
@@ -83,122 +110,106 @@ if (typeof window.clickListenerAttached === "undefined") {
         fragment.appendChild(document.createTextNode(part));
       }
     }
-  
+
     if (didMatch) {
       parent.replaceChild(fragment, textNode);
     }
   }
-  
 
   if (highlightedActive) {
-    // 🔁 If highlighting is already active, remove all highlights
-
-    // Select all previously highlighted spans
     document.querySelectorAll("span.__highlightedWord").forEach(span => {
-      // Replace each span with plain text
       span.replaceWith(document.createTextNode(span.textContent));
     });
-
-    // Reset the state and count
     await chrome.storage.local.set({ highlightedActive: false, wordCount: 0 });
     console.log("🔁 Highlights removed.");
   } else {
-    // ✅ Otherwise, enable highlighting using kuromoji
-
-    // Build the tokenizer using the included dictionary files
     const builder = kuromoji.builder({
-      dicPath: chrome.runtime.getURL("bower_components/kuromoji/dict") // Chrome-safe path to dict
+      dicPath: chrome.runtime.getURL("bower_components/kuromoji/dict")
     });
 
-    // Build the tokenizer asynchronously
     builder.build((err, tokenizer) => {
       if (err) {
-        // If there's an error, log and exit
         console.error("Tokenizer error:", err);
         return;
       }
-      console.log("✅ Tokenizer built."); // Add this
-      
+
+      console.log("✅ Tokenizer built.");
+
+      const tokens = tokenizer.tokenize(document.body.innerText || "");
+
       function extractMergedWords(tokens) {
         const words = [];
         let i = 0;
-    
         while (i < tokens.length) {
           const current = tokens[i];
           const next = tokens[i + 1];
           const next2 = tokens[i + 2];
-    
-          // Case 1: Verb + auxiliary (e.g., 食べ + たい → 食べたい)
-          if (
-            current.pos === "動詞" &&
-            next && next.pos === "助動詞"
-          ) {
+
+          if (current.pos === "動詞" && next?.pos === "助動詞") {
             words.push(current.surface_form + next.surface_form);
             i += 2;
             continue;
           }
-    
-          // Case 2: Verb + suffix + auxiliary (e.g., 行か + なかっ + た → 行かなかった)
-          if (
-            current.pos === "動詞" &&
-            next && next.pos === "助動詞" &&
-            next2 && next2.pos === "助動詞"
-          ) {
+
+          if (current.pos === "動詞" && next?.pos === "助動詞" && next2?.pos === "助動詞") {
             words.push(current.surface_form + next.surface_form + next2.surface_form);
             i += 3;
             continue;
           }
-    
-          // Add base form if valid
+
           if (current.basic_form && current.basic_form !== "*") {
             words.push(current.basic_form);
           }
-    
-          // Also add surface form
+
           words.push(current.surface_form);
           i++;
         }
-    
         return [...new Set(words)];
       }
-    
-      // Grab the full page's visible text
-      const text = document.body.innerText || "";
 
-      // Tokenize the text into Japanese words
-      const tokens = tokenizer.tokenize(text);
-
-      // Get the base form (dictionary form) of each token
-      const words = tokens.map(t =>
-        t.basic_form === "*" ? t.surface_form : t.basic_form
-      );
-
-      // 🔽 EXTRACT SMART WORD LIST WITH CONJUGATIONS
       const uniqueWords = extractMergedWords(tokens);
 
-
-      // Walk through all visible text nodes and highlight matches
       walkTextNodes(document.body, (textNode) => {
         highlightMatchesInNode(textNode, uniqueWords);
       });
-      if (!window.clicklistenerAttached) {
+
+      if (!window.clickListenerAttached) {
         document.addEventListener("click", function (e) {
-          if (e.target.classList.contains("__highlightedWord")) {
-            const word = e.target.dataset.word;
+
             // You can do anything here:
             // - Open a popup
             // - Search the word
-            window.open(`https://jisho.org/search/${word}`, "_blank");
+            //window.open(https://jisho.org/search/${word}, "_blank");
+
             // - Look it up in your database
             // - Show a translation
             // - Send to background.js
-            alert(`You clicked on: ${word}`);
-          }
-        });   
-      } 
-      window.clicklistenerAttached = true; // Set the flag to true after attaching the listener
 
-      // Save the state and number of highlights
+          if (e.target.classList.contains("__highlightedWord")) {
+            const word = e.target.dataset.word;
+
+            Promise.all([
+              fetch(window.termBank1).then(res => res.json()),
+              fetch(window.termBank2).then(res => res.json())
+            ])
+              .then(([bank1, bank2]) => {
+                const combined = [...bank1, ...bank2];
+                const match = combined.find(entry => entry[0] === word);
+                const id = match?.[2]?.frequency?.displayValue || "unknown";
+
+                if (match) {
+                  addBookmark(word, id);
+                  alert(`📘 Bookmarked "${word}" with ID: ${id}`);
+                } else {
+                  alert(`⚠️ Word "${word}" not found in either bank.`);
+                }
+              })
+              .catch(err => console.error("An error occurred:", err));
+          }
+        });
+        window.clickListenerAttached = true;
+      }
+
       chrome.storage.local.set({ highlightedActive: true, wordCount: count });
       console.log("✅ Highlighted", count, "words.");
     });
