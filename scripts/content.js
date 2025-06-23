@@ -54,6 +54,7 @@ function addBookmark(word, id) {
 }
 
 // === Main Highlighter Logic ===
+
 (async function () {
   const { highlightedActive } = await chrome.storage.local.get("highlightedActive");
   let count = 0;
