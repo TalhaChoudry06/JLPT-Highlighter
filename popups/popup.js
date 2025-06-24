@@ -1,6 +1,6 @@
 //Authentication
 document.getElementById("login").addEventListener("click", async () => {
-  const clientId = "541096500259-nknkjm2dktdnknlc6s00rrlbrmep3nee.apps.googleusercontent.com";
+  const clientId = "541096500259-87fha1lqua8gk8gc13v1ssedkvofp427.apps.googleusercontent.com";
   const redirectUri = chrome.identity.getRedirectURL();
   const scopes = ["https://www.googleapis.com/auth/userinfo.email"];
   
@@ -46,7 +46,7 @@ document.getElementById("login").addEventListener("click", async () => {
 
 // When popup loads, update checkbox and word count display, change highlight toggle
 window.addEventListener("", () => {
-  chrome.storage.local.get(["highlightedActive", "wordCount"], (res) => {
+  chrome.storage.local.get(["DOMContentLoaded", "wordCount"], (res) => {
     document.getElementById("highlightToggle").checked = res.highlightedActive ?? false;
     document.getElementById("wordCount").textContent = res.wordCount ?? 0;
   });
