@@ -1,6 +1,6 @@
 //Authentication
 document.getElementById("login").addEventListener("click", async () => {
-  const clientId = "541096500259-87fha1lqua8gk8gc13v1ssedkvofp427.apps.googleusercontent.com";
+  const clientId = "CLIENT_ID";
   const redirectUri = chrome.identity.getRedirectURL();
   const scopes = ["https://www.googleapis.com/auth/userinfo.email"];
   
